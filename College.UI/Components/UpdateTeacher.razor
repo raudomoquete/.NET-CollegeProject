@@ -1,0 +1,63 @@
+﻿@page "/updateteacher/{id:int}"
+@using Blazored.Toast.Services
+@using College.UI.Interfaces
+@using College.UI.Models.Teacher
+
+
+@inject NavigationManager Navigation
+@inject Radzen.DialogService dialogService
+
+<RadzenTemplateForm Data="@UpdTeachertInput" TItem="UpdateTeacherInput" Submit="@((UpdateTeacherInput args) => { UpdateTeacherAsync(args); })">
+    <div class="row">
+        <div class="col-6">
+            <RadzenLabel Text="First Name" />
+            <RadzenTextBox @bind-Value="@UpdTeachertInput.Name" Style="width: 100%" />
+        </div>
+        <div class="col-6">
+            <RadzenLabel Text="Last Name" />
+            <RadzenTextBox @bind-Value="@UpdTeachertInput.LastName" Style="width: 100%" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <RadzenLabel Text="Gender" />
+            <RadzenDropDown Data="@(new List<string> { "Male", "Female" })" @bind-Value="@UpdTeachertInput.Gender" Style="width: 100%" />
+        </div>
+    </div>
+    <RadzenButton Text="Update" ButtonStyle="ButtonStyle.Info" Type="Submit" Style="margin-top: 10px;" />
+</RadzenTemplateForm>
+
+@code {
+    [Parameter] public UpdateTeacherInput UpdTeachertInput { get; set; } = new UpdateTeacherInput();
+    private new List<GetAllTeachersQueryResult> AllTeachersQueryResult { get; set; } = new List<GetAllTeachersQueryResult>();
+
+    #region Services
+    [Inject] private ITeacherService _studentService { get; set; }
+    [Inject] private IToastService _toastService { get; set; }
+    #endregion
+
+
+
+    private async Task UpdateTeacherAsync(UpdateTeacherInput teacher)
+    {
+        var confirmed = await dialogService.Confirm($"¿Seguro que quieres actualizar el Profesor?",
+            "Confirmación",
+            new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" });
+
+        if (confirmed == true)
+        {
+            var result = await _studentService.UpdateTeacherAsync(teacher);
+
+            if (!result.IsError && result.Success)
+            {
+                _toastService.ShowInfo($"El profesor ha sido actualizado correctamente.");
+                dialogService.Close(true);
+
+            }
+            else
+            {
+                _toastService.ShowError($"Ha ocurrido un error actualizando el profesor.");
+            }
+        }
+    }
+}

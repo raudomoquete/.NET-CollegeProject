@@ -1,0 +1,154 @@
+﻿@page "/gradeStudent"
+@using Blazored.Toast.Services
+@using College.UI.Interfaces
+@using College.UI.Models.GradeStudent
+@inject Radzen.DialogService dialogService
+
+<PageTitle>Grade Students</PageTitle>
+
+<RadzenHeading Size="H2" Text="Grade Students" />
+
+<RadzenButton class="rz-ripple" Text="Add New Grade Student" ButtonStyle="ButtonStyle.Info" Click="@(args => OpenAddGradeStudentModal())" />
+
+<div style="height: 20px;">
+</div>
+
+<RadzenCard>
+    <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Filtro</RadzenText>
+    <RadzenTextBox class="w-50" @bind-Value="@searchTerm" aria-label="Buscar" Placeholder="Buscar por nombre de estudiante" />
+    <RadzenButton class="rz-ripple" ButtonStyle="ButtonStyle.Info" Text="Buscar" Icon="" Click="@(arg => SearchGradeStudents())" />
+</RadzenCard>
+
+<div style="height: 20px;">
+</div>
+
+<RadzenDataGrid AllowColumnResize="false" style="height: 30%" AllowAlternatingRows="false"
+                Data="@filteredGradeStudents" TItem="GetAllGradeStudentResult" AllowSorting="true" PageSize="@pageSize"
+                AllowPaging="true" PagerHorizontalAlign="Radzen.HorizontalAlign.Center"
+                IsLoading="@isLoading" Count="@totalRecords" LoadData="@LoadGradeStudents">
+    <Columns>
+        <RadzenDataGridColumn TItem="GetAllGradeStudentResult" Property="StudentName" Title="Nombre" Width="150px" TextAlign="TextAlign.Left" />
+        <RadzenDataGridColumn TItem="GetAllGradeStudentResult" Property="GradeName" Title="Grado" Width="150px" TextAlign="TextAlign.Left" />
+        <RadzenDataGridColumn TItem="GetAllGradeStudentResult" Property="Status" Title="Estado" Width="150px" TextAlign="TextAlign.Center" />
+        <RadzenDataGridColumn TItem="GetAllGradeStudentResult" Title="Acciones" Width="200px" TextAlign="TextAlign.Center">
+            <Template Context="gradeStudent">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+                    <RadzenButton Click="@(async () => await OpenUpdateGradeStudentModal(gradeStudent.Id))" Variant="Variant.Flat" Text="Editar"
+                                  ButtonStyle="ButtonStyle.Warning" />
+                    <RadzenButton Click="@(async () => await DeleteGradeStudent(gradeStudent.Id))" Variant="Variant.Flat" Text="Borrar"
+                                  ButtonStyle="ButtonStyle.Danger" />
+                </RadzenStack>
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    private string searchTerm;
+    private List<GetAllGradeStudentResult> GradeStudentsResult { get; set; } = new List<GetAllGradeStudentResult>();
+
+    private List<GetAllGradeStudentResult> filteredGradeStudents { get; set; } = new List<GetAllGradeStudentResult>();
+
+    // private List<GetAllGradeStudentResult> filteredGradeStudents =>
+    //     string.IsNullOrWhiteSpace(searchTerm) ? GradeStudentsResult : GradeStudentsResult
+    //           .Where(s => s.Grade..Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+    //           .ToList();
+
+    private int totalRecords;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private int pageSize = 10;
+
+    [Inject] private IGradeStudentService _gradeStudentService { get; set; }
+    [Inject] private IToastService _toastService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGradeStudents();
+    }
+
+    private async Task LoadGradeStudents()
+    {
+        isLoading = true;
+        try
+        {
+            GradeStudentsResult = await _gradeStudentService.GetAllGradeStudentAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddGradeStudentModal()
+    {
+        var result = await dialogService.OpenAsync<AddGradeStudent>("", null);
+        if (result == true)
+        {
+            await LoadGradeStudents();
+        }
+    }
+
+    private async Task OpenUpdateGradeStudentModal(int gradeStudentId)
+    {
+        var gradeStudent = await _gradeStudentService.GetGradeStudentByIdAsync(gradeStudentId);
+        if (gradeStudent != null)
+        {
+            var updGradeStudentInput = new UpdateGradeStudentInput
+                {
+                    Id = gradeStudent.Id,
+                    StudentId = gradeStudent.StudentId,
+                    GradeId = gradeStudent.GradeId,
+                    SectionGroup = gradeStudent.SectionGroup,
+                };
+
+            var result = await dialogService.OpenAsync<UpdateGradeStudent>("Actualizar Estudiante de Grado",
+                    new Dictionary<string, object> { { "UpdGradeStudentInput", updGradeStudentInput } });
+
+            if (result == true)
+            {
+                await LoadGradeStudents();
+            }
+        }
+    }
+
+    private async Task DeleteGradeStudent(int gradeStudentId)
+    {
+        var confirmed = await dialogService.Confirm($"¿Seguro que quieres borrar el estudiante?", "Confirmación",
+            new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" });
+
+        if (confirmed == true)
+        {
+            var result = await _gradeStudentService.RemoveGradeStudentAsync(gradeStudentId);
+
+            if (!result.IsError && result.Success)
+            {
+                _toastService.ShowInfo("El estudiante ha sido borrado correctamente.");
+                await LoadGradeStudents();
+            }
+            else
+            {
+                _toastService.ShowError("Ha ocurrido un error borrando el estudiante.");
+            }
+        }
+    }
+
+    private void SearchGradeStudents()
+    {
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredGradeStudents = GradeStudentsResult
+                .Where(g => g.Grade.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+        else
+        {
+            filteredGradeStudents = GradeStudentsResult;
+        }
+    }
+}

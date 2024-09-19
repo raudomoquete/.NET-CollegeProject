@@ -1,0 +1,66 @@
+﻿@page "/updatestudent/{id:int}"
+@using Blazored.Toast.Services
+@using College.UI.Interfaces
+@using College.UI.Models.Student
+
+@inject NavigationManager Navigation
+@inject Radzen.DialogService dialogService
+
+<RadzenTemplateForm Data="@UpdStudentInput" TItem="UpdateStudentInput" Submit="@((UpdateStudentInput args) => { UpdateStudentAsync(args); })">
+    <div class="row">
+        <div class="col-6">
+            <RadzenLabel Text="First Name" />
+            <RadzenTextBox @bind-Value="@UpdStudentInput.Name" Style="width: 100%" />
+        </div>
+        <div class="col-6">
+            <RadzenLabel Text="Last Name" />
+            <RadzenTextBox @bind-Value="@UpdStudentInput.LastName" Style="width: 100%" />
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <RadzenLabel Text="Gender" />
+            <RadzenDropDown Data="@(new List<string> { "Male", "Female" })" @bind-Value="@UpdStudentInput.Gender" Style="width: 100%" />
+        </div>
+        <div class="col-6">
+            <RadzenLabel Text="Birth Date" />
+            <RadzenDatePicker @bind-Value="@UpdStudentInput.BirthDate" Style="width: 100%" />
+        </div>
+    </div>
+    <RadzenButton Text="Update" ButtonStyle="ButtonStyle.Info" Type="Submit" Style="margin-top: 10px;" />
+</RadzenTemplateForm>
+
+@code {
+    [Parameter] public UpdateStudentInput UpdStudentInput { get; set; } = new UpdateStudentInput();
+    private new List<GetAllStudentsQueryResult> AllStudentsQueryResult { get; set; } = new List<GetAllStudentsQueryResult>();
+
+    #region Services
+    [Inject] private IStudentService _studentService { get; set; }
+    [Inject] private IToastService _toastService { get; set; }
+    #endregion
+
+ 
+
+    private async Task UpdateStudentAsync(UpdateStudentInput student)
+    {
+        var confirmed = await dialogService.Confirm($"¿Seguro que quieres actualizar el estudiante?",
+            "Confirmación",
+            new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" });
+
+        if (confirmed == true)
+        {
+            var result = await _studentService.UpdateStudentAsync(student);
+
+            if (!result.IsError && result.Success)
+            {
+                _toastService.ShowInfo($"El estudiante ha sido actualizado correctamente.");
+                dialogService.Close(true);
+
+            }
+            else
+            {
+                _toastService.ShowError($"Ha ocurrido un error actualizando el estudiante.");
+            }
+        }
+    }
+}

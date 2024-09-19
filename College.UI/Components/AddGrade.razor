@@ -1,0 +1,55 @@
+﻿@using Blazored.Toast.Services
+@using College.UI.Interfaces
+@using College.UI.Models.Grade
+@inject Radzen.DialogService dialogService
+
+
+<RadzenTemplateForm Data="@AddGradeInput" TItem="GradeInput" Submit="@((GradeInput args) => { AddGradeDataAsync(args); })">
+    <RadzenFieldset Text="Grade Information">
+        <RadzenLabel Text="Name" />
+        <RadzenTextBox @bind-Value="@AddGradeInput.gradeName" Style="width: 100%;" />
+
+@*      <RadzenLabel Text="Teacher" />
+        <RadzenTextBox @bind-Value="@AddGradeInput.TeacherId.ToString()" Style="width: 100%;" /> *@
+
+    </RadzenFieldset>
+
+    <RadzenButton Text="Save" ButtonStyle="ButtonStyle.Info" Type="Submit" Style="margin-top: 20px;" />
+</RadzenTemplateForm>
+
+@code {
+    #region Properties
+    private GradeInput AddGradeInput = new GradeInput();
+    #endregion
+
+    #region Fields
+    private bool isLoading = false;
+    #endregion
+
+    #region Services
+    [Inject] private IGradeService _gradeService { get; set; }
+    [Inject] private IToastService _toastService { get; set; }
+    #endregion
+
+    public async Task AddGradeDataAsync(GradeInput args)
+    {
+        var confirmed = await dialogService.Confirm($"¿Seguro que quieres agregar este nuevo registro?",
+            "Confirmación",
+            new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" });
+
+        if (confirmed == true)
+        {
+            var result = await _gradeService.AddGradeAsync(AddGradeInput);
+
+            if (!result.IsError)
+            {
+                _toastService.ShowInfo($"El grado ha sido agregado correctamente.");
+                dialogService.Close(true);
+            }
+            else
+            {
+                _toastService.ShowError($"Ha ocurrido un error al agregar el grado.");
+            }
+        }
+    }
+}

@@ -1,0 +1,55 @@
+﻿@using Blazored.Toast.Services
+@using College.UI.Interfaces
+@using College.UI.Models.GradeStudent
+@inject Radzen.DialogService dialogService
+
+<RadzenTemplateForm Data="@UpdGradeStudentInput" TItem="UpdateGradeStudentInput" Submit="@((UpdateGradeStudentInput args) => { UpdateGradeStudentDataAsync(args); })">
+    <RadzenFieldset Text="Actualizar Estudiante de Grado">
+        <RadzenLabel Text="Estudiante" />
+        <RadzenDropDown @bind-Value="@UpdGradeStudentInput.StudentId" TextProperty="FullName" ValueProperty="StudentId" Style="width: 100%;" Disabled="true" />
+
+        <RadzenLabel Text="Grado" />
+        <RadzenDropDown @bind-Value="@UpdGradeStudentInput.GradeId"TextProperty="GradeName" ValueProperty="GradeId" Style="width: 100%;" />
+
+        <RadzenLabel Text="Grupo de Sección" />
+        <RadzenTextBox @bind-Value="@UpdGradeStudentInput.SectionGroup" Style="width: 100%;" />
+    </RadzenFieldset>
+
+    <RadzenButton Text="Guardar Cambios" ButtonStyle="ButtonStyle.Info" Type="Submit" Style="margin-top: 20px;" />
+</RadzenTemplateForm>
+
+@code {
+    #region Properties
+    [Parameter] public UpdateGradeStudentInput UpdGradeStudentInput { get; set; }
+    private new List<GetAllGradeStudentResult> allGradeStudentResults { get; set; } = new List<GetAllGradeStudentResult>();
+    #endregion
+
+    #region Services
+    [Inject] private IGradeStudentService _gradeStudentService { get; set; }
+    [Inject] private IToastService _toastService { get; set; }
+    #endregion
+
+    #region Methods
+
+
+    public async Task UpdateGradeStudentDataAsync(UpdateGradeStudentInput gradestudent)
+    {
+        var confirmed = await dialogService.Confirm($"¿Seguro que quieres actualizar los datos del estudiante?", "Confirmación", new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" });
+
+        if (confirmed == true)
+        {
+            var result = await _gradeStudentService.UpdateGradeStudentAsync(gradestudent);
+
+            if (!result.IsError)
+            {
+                _toastService.ShowInfo("Los datos del estudiante han sido actualizados correctamente.");
+                dialogService.Close(true);
+            }
+            else
+            {
+                _toastService.ShowError("Ha ocurrido un error al actualizar los datos del estudiante.");
+            }
+        }
+    }
+    #endregion
+}

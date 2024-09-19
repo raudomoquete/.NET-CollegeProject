@@ -1,0 +1,174 @@
+﻿@page "/grades"
+@using Blazored.Toast.Services
+@using College.UI.Components
+@using College.UI.Interfaces
+@using College.UI.Models.Grade
+@using College.UI.Models.Teacher
+
+@layout MainLayout
+@inject Radzen.DialogService dialogService
+
+<RadzenHeading Size="H2" Text="Grades" />
+
+<RadzenButton class="rz-ripple" Text="Add New Teacher" ButtonStyle="ButtonStyle.Info" Click="@(args => OpenAddGradeModal())" />
+
+<div style="height: 20px;">
+</div>
+
+<RadzenCard>
+    <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Filtro</RadzenText>
+    <RadzenTextBox class="w-50" @bind-Value="@searchTerm" aria-label="Buscar" Placeholder="Buscar por nombre del Grado" />
+    <RadzenButton class="rz-ripple" ButtonStyle="ButtonStyle.Info" Text="Buscar" Icon="" Click="@(arg => SearchGrades())" />
+</RadzenCard>
+
+<div style="height: 20px;">
+</div>
+
+<RadzenDataGrid AllowColumnResize="false" style="height: 30%" AllowAlternatingRows="false"
+                Data="@filteredGrades" TItem="GetAllGradesQueryResult" AllowSorting="true"
+                AllowPaging="true" PagerHorizontalAlign="Radzen.HorizontalAlign.Center"
+                IsLoading=@isLoading Count="@totalRecords" LoadData="@LoadGrades">
+    <Columns>
+        <RadzenDataGridColumn TItem="GetAllGradesQueryResult" Property="Name" Title="Nombre del Grado" Width="150px" TextAlign="TextAlign.Left" />
+
+        <!--Maestro -->
+        <RadzenDataGridColumn TItem="GetAllGradesQueryResult" Title="Nombre del Maestro" Width="200px" TextAlign="TextAlign.Left">
+            <Template Context="grade">
+                @($"{grade.Teacher.Name} {grade.Teacher.LastName}")
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="GetAllGradesQueryResult" Property="Teacher.Gender" Title="Género del Maestro" Width="100px" TextAlign="TextAlign.Left" />
+
+
+        <RadzenDataGridColumn TItem="GetAllGradesQueryResult" Title="Acciones" Width="200px" TextAlign="TextAlign.Center">
+            <Template Context="grade">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+                   
+                    <RadzenButton Click="@(async () => await OpenUpdateGradeModal(grade.GradeId))" Variant="Variant.Flat" Text="Editar"
+                                  ButtonStyle="ButtonStyle.Warning" />
+                    <RadzenButton Click="@(async () => await DeleteGrade(grade.GradeId))" Variant="Variant.Flat" Text="Borrar"
+                                  ButtonStyle="ButtonStyle.Danger" />
+                </RadzenStack>
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+
+
+
+
+@code {
+    [Parameter]
+    public List<GetAllGradesQueryResult> GradesResult { get; set; } = new List<GetAllGradesQueryResult>();
+
+    private string searchTerm = string.Empty;
+    private List<GetAllGradesQueryResult> filteredGrades = new List<GetAllGradesQueryResult>();
+
+    private int totalRecords;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+
+    [Inject] private IGradeService _gradeService { get; set; }
+    [Inject] private IToastService _toastService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGrades();
+    }
+
+    private async Task LoadGrades()
+    {
+        isLoading = true;
+        try
+        {
+            GradesResult = await _gradeService.GetAllGradesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddGradeModal()
+    {
+        var result = await dialogService.OpenAsync<AddGrade>("", null);
+        if (result == true)
+        {
+            await LoadGrades();
+        }
+    }
+
+    private async Task OpenUpdateGradeModal(int gradeId)
+    {
+        var grade = await _gradeService.GetGradeByIdAsync(gradeId);
+        if (grade != null)
+        {
+            var updgradeInput = new UpdateGradeInput
+            {
+                GradeId = grade.GradeId,
+                Name = grade.Name,
+                    Teacher = grade.Teacher != null ? new UpdateTeacherInput
+                    {
+                        teacherId = grade.Teacher.TeacherId,
+                        Name = grade.Teacher.Name,
+                        LastName = grade.Teacher.LastName,
+                        Gender = grade.Teacher.Gender
+                    } : null
+            };
+
+            var result = await dialogService.OpenAsync<UpdateTeacher>("",
+                    new Dictionary<string, object> { { "UpdGradeInput", updgradeInput } });
+
+            if (result == true)
+            {
+                await LoadGrades();
+            }
+        }
+    }
+
+    private async Task DeleteGrade(int gradeId)
+    {
+        var confirmed = await dialogService.Confirm($"¿Seguro que quieres borrar el grado?",
+            "Confirmación",
+            new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" });
+
+        if (confirmed == true)
+        {
+            var result = await _gradeService.RemoveGradeAsync(gradeId);
+
+            if (!result.IsError && result.Success)
+            {
+                _toastService.ShowInfo($"El grado ha sido borrado correctamente.");
+                await LoadGrades();
+            }
+            else
+            {
+                _toastService.ShowError($"Ha ocurrido un error borrando el grado.");
+            }
+        }
+    }
+
+    private void SearchGrades()
+    {
+        
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredGrades = GradesResult
+                .Where(g => g.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+        else
+        {
+            filteredGrades = GradesResult;
+        }
+        totalRecords = filteredGrades.Count;
+    }
+
+}

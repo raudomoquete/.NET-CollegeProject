@@ -1,0 +1,69 @@
+﻿@page "/updategrade/{id:int}"
+@using Blazored.Toast.Services
+@using College.UI.Interfaces
+@using College.UI.Models.Grade
+
+
+@inject NavigationManager Navigation
+@inject Radzen.DialogService dialogService
+
+<RadzenTemplateForm Data="@UpdGradeInput" TItem="UpdateGradeInput" Submit="@((UpdateGradeInput args) => { UpdateGradeAsync(args); })">
+    <div class="row">
+        <div class="col-6">
+            <RadzenLabel Text="Nombre del grado" />
+            <RadzenTextBox @bind-Value="@UpdGradeInput.Name" Style="width: 100%" />
+        </div>
+        <div class="col-6">
+            <RadzenLabel Text="Nombre del Profesor" />
+            <RadzenTextBox @bind-Value="@UpdGradeInput.Teacher.Name" Style="width: 100%" />
+        </div>
+        <div class="col-6">
+            <RadzenLabel Text="Apellido del Profesor" />
+            <RadzenTextBox @bind-Value="@UpdGradeInput.Teacher.LastName" Style="width: 100%" />
+        </div>
+
+        <div class="col-6">
+            <RadzenLabel Text="Género del Profesor" />
+            <RadzenDropDown @bind-Value="@UpdGradeInput.Teacher.Gender"
+                            Data="@(new List<string> { "Masculino", "Femenino", "Otro" })"
+                            Style="width: 100%" />
+        </div>
+    </div>
+
+    <RadzenButton Text="Update" ButtonStyle="ButtonStyle.Info" Type="Submit" Style="margin-top: 10px;" />
+</RadzenTemplateForm>
+
+@code {
+    [Parameter] public UpdateGradeInput UpdGradeInput { get; set; } = new UpdateGradeInput();
+    private new List<GetAllGradesQueryResult> AllGradesQueryResult { get; set; } = new List<GetAllGradesQueryResult>();
+
+    #region Services
+    [Inject] private IGradeService _gradeService { get; set; }
+    [Inject] private IToastService _toastService { get; set; }
+    #endregion
+
+
+
+    private async Task UpdateGradeAsync(UpdateGradeInput grade)
+    {
+        var confirmed = await dialogService.Confirm($"¿Seguro que quieres actualizar el grado?",
+            "Confirmación",
+            new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" });
+
+        if (confirmed == true)
+        {
+            var result = await _gradeService.UpdateGradeAsync(grade);
+
+            if (!result.IsError && result.Success)
+            {
+                _toastService.ShowInfo($"El grado ha sido actualizado correctamente.");
+                dialogService.Close(true);
+
+            }
+            else
+            {
+                _toastService.ShowError($"Ha ocurrido un error actualizando el grado.");
+            }
+        }
+    }
+}

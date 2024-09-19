@@ -1,0 +1,159 @@
+﻿@page "/teachers"
+@using Blazored.Toast.Services
+@using College.UI.Components
+@using College.UI.Interfaces
+@using College.UI.Models.Teacher
+@layout MainLayout
+@inject Radzen.DialogService dialogService
+
+
+<RadzenHeading Size="H2" Text="Teachers" />
+
+<RadzenButton class="rz-ripple" Text="Add New Teacher" ButtonStyle="ButtonStyle.Info" Click="@(args => OpenAddTeacherModal())" />
+
+<div style="height: 20px;">
+</div>
+
+<RadzenCard>
+    <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Filtro</RadzenText>
+    <RadzenTextBox class="w-50" @bind-Value="@searchTerm" aria-label="Buscar" Placeholder="Buscar por nombre del profesor" />
+    <RadzenButton class="rz-ripple" ButtonStyle="ButtonStyle.Info" Text="Buscar" Icon="" Click="@(arg => SearchTeachers())" />
+</RadzenCard>
+
+<div style="height: 20px;">
+</div>
+
+<RadzenDataGrid AllowColumnResize="false" style="height: 30%" AllowAlternatingRows="false"
+                Data="@filteredTeachers" TItem="GetAllTeachersQueryResult" AllowSorting="true" PageSize="@pageSize"
+                AllowPaging="true" PagerHorizontalAlign="Radzen.HorizontalAlign.Center"
+                IsLoading=@isLoading Count="@totalRecords" LoadData="@LoadTeachers">
+    <Columns>
+        <RadzenDataGridColumn TItem="GetAllTeachersQueryResult" Property="Name" Title="Nombre" Width="150px" TextAlign="TextAlign.Left" />
+        <RadzenDataGridColumn TItem="GetAllTeachersQueryResult" Property="LastName" Title="Apellido" Width="150px" TextAlign="TextAlign.Left" />
+        <RadzenDataGridColumn TItem="GetAllTeachersQueryResult" Property="Gender" Title="Genero" Width="150px" TextAlign="TextAlign.Center" />
+        <RadzenDataGridColumn TItem="GetAllTeachersQueryResult" Title="Acciones" Width="200px" TextAlign="TextAlign.Center">
+            <Template Context="teacher">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+                  @*   <RadzenButton Click="@(async () => await OpenTeacherDetails(teacher))" Variant="Variant.Flat" Text="Detalles" ButtonStyle="ButtonStyle.Info" /> *@
+                    <RadzenButton Click="@(async () => await OpenUpdateTeacherModal(teacher.TeacherId))" Variant="Variant.Flat" Text="Editar"
+                                  ButtonStyle="ButtonStyle.Warning" />
+                    <RadzenButton Click="@(async () => await DeleteTeacher(teacher.TeacherId))" Variant="Variant.Flat" Text="Borrar"
+                                  ButtonStyle="ButtonStyle.Danger" />
+                </RadzenStack>
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+
+    [Parameter] 
+    public List<GetAllTeachersQueryResult> TeachersResult { get; set; } = new List<GetAllTeachersQueryResult>();
+   
+    private string searchTerm;
+     private List<GetAllTeachersQueryResult> filteredTeachers =>
+        string.IsNullOrWhiteSpace(searchTerm) ? TeachersResult : TeachersResult
+              .Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+              .ToList();
+    private int totalRecords;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private int pageSize = 10;
+
+    [Inject] private ITeacherService _teacherService { get; set; }
+    [Inject] private IToastService _toastService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTeachers();
+    }
+
+    private async Task LoadTeachers()
+    {
+        isLoading = true;
+        try
+        {
+            TeachersResult = await _teacherService.GetAllTeachersAsync();
+        }
+        catch(Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenAddTeacherModal()
+    {
+        var result = await dialogService.OpenAsync<AddTeacher>("", null);
+        if (result == true)
+        {
+            await LoadTeachers();
+        }
+    }
+
+    private async Task OpenUpdateTeacherModal(int teacherId)
+    {
+        var teacher = await _teacherService.GetTeachertByIdAsync(teacherId);
+        if (teacher != null)
+        {
+            var updteacherInput = new UpdateTeacherInput
+            {                
+                teacherId = teacher.TeacherId,
+                Name = teacher.Name,
+                LastName = teacher.LastName,
+                Gender = teacher.Gender,
+                 
+            };
+
+            var result = await dialogService.OpenAsync<UpdateTeacher>("",
+                    new Dictionary<string, object> { { "UpdTeacherInput", updteacherInput } });
+
+            if (result == true)
+            {
+                await LoadTeachers();
+            }
+        } 
+    }
+
+    private async Task DeleteTeacher(int teacherId)
+    {
+        var confirmed = await dialogService.Confirm($"¿Seguro que quieres borrar el profesor?",
+            "Confirmación",
+            new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" });
+
+        if (confirmed == true)
+        {
+            var result = await _teacherService.RemoveTeacherAsync(teacherId);
+
+            if (!result.IsError && result.Success)
+            {
+                _toastService.ShowInfo($"El profesor ha sido borrado correctamente.");
+                await LoadTeachers();
+            }
+            else
+            { 
+                _toastService.ShowError($"Ha ocurrido un error borrando el profesor.");
+            }
+        }
+    }
+
+    private void SearchTeachers()
+    {
+        // Este método será llamado al hacer clic en el botón de búsqueda.
+        // Puedes aplicar lógica adicional si es necesario.
+    }
+
+    private async Task OpenTeacherDetails(GetAllTeachersQueryResult teacher)
+    {
+        // Abre un modal o muestra los detalles del profesor.
+    }
+
+    private async Task ShowConfirmationDialog(GetAllTeachersQueryResult teacher, bool isApprove)
+    {
+        // Lógica para mostrar un diálogo de confirmación al aprobar/rechazar.
+    }
+}

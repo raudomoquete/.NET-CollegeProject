@@ -1,0 +1,57 @@
+﻿@using Blazored.Toast.Services
+@using College.UI.Interfaces
+@using College.UI.Models.Teacher
+@inject Radzen.DialogService dialogService
+
+
+<RadzenTemplateForm Data="@AddTeacherInput" TItem="TeacherInput" Submit="@((TeacherInput args) => { AddTeacherDataAsync(args); })">
+    <RadzenFieldset Text="Teacher Info">
+        <RadzenLabel Text="Name" />
+        <RadzenTextBox @bind-Value="@AddTeacherInput.TeacherName" Style="width: 100%;" />
+
+        <RadzenLabel Text="LastName" />
+        <RadzenTextBox @bind-Value="@AddTeacherInput.TeacherLastName" Style="width: 100%;" />
+
+        <RadzenLabel Text="Gender" />
+        <RadzenDropDown @bind-Value="@AddTeacherInput.TeacherGender" Data="@(new List<string> { "Masculino", "Femenino" })" Style="width: 100%;" />
+    </RadzenFieldset>
+
+    <RadzenButton Text="Save" ButtonStyle="ButtonStyle.Info" Type="Submit" Style="margin-top: 20px;" />
+</RadzenTemplateForm>
+
+@code {
+    #region Properties
+    private TeacherInput AddTeacherInput = new TeacherInput();
+    #endregion
+
+    #region Fields
+    private bool isLoading = false;
+    #endregion
+
+    #region Services
+    [Inject] private ITeacherService _teacherService { get; set; }
+    [Inject] private IToastService _toastService { get; set; }
+    #endregion
+
+    public async Task AddTeacherDataAsync(TeacherInput args)
+    {
+        var confirmed = await dialogService.Confirm($"¿Seguro que quieres agregar este nuevo registro?",
+            "Confirmación",
+            new ConfirmOptions { OkButtonText = "Sí", CancelButtonText = "No" });
+
+        if (confirmed == true)
+        {
+            var result = await _teacherService.AddTeacherAsync(AddTeacherInput);
+
+            if (!result.IsError)
+            {
+                _toastService.ShowInfo($"El profesor ha sido agregado correctamente.");
+                dialogService.Close(true);
+            }
+            else
+            {
+                _toastService.ShowError($"Ha ocurrido un error al agregar el profesor.");
+            }
+        }
+    }
+}

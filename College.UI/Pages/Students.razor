@@ -1,0 +1,77 @@
+﻿@page "/students"
+@using Blazored.Toast.Services
+@using College.UI.Components
+@using College.UI.Interfaces
+@using College.UI.Models.Student
+@layout MainLayout
+@inject Radzen.DialogService dialogService
+
+<RadzenHeading Size="H2" Text="Students" />
+
+
+<RadzenButton class="rz-ripple" Text="Add New Student" ButtonStyle="ButtonStyle.Info" Click="@(args => OpenAddStudentModal())" />
+
+<div style="height: 20px;">
+</div
+
+<RadzenCard>
+    <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Filtro</RadzenText>
+    <RadzenTextBox class="w-50" @bind-Value="@searchTerm" aria-label="Buscar" Placeholder="Buscar por nombre del Estudiante" />
+    <RadzenButton class="rz-ripple" ButtonStyle="ButtonStyle.Info" Text="Buscar" Icon="" Click="@(arg => SearchStudents())" />
+</RadzenCard>
+
+<div style="height: 20px;">
+</div
+
+
+<StudentsCard @ref="studentsCardComponent" Students="filteredStudents" />
+
+
+
+
+@code {
+    private StudentsCard studentsCardComponent;
+
+    #region Properties
+    private new List<GetAllStudentsQueryResult> AllStudentsQueryResult { get; set; } = new List<GetAllStudentsQueryResult>();
+    
+    private string searchTerm = string.Empty;
+    private List<GetAllStudentsQueryResult> filteredStudents = new List<GetAllStudentsQueryResult>();
+    private int totalRecords;
+    #endregion
+
+    #region Services
+    [Inject] private IStudentService _studentService { get; set; }
+    [Inject] private IToastService _toastService { get; set; }
+    #endregion
+
+    private async Task LoadStudentsAsync()
+    {
+        AllStudentsQueryResult = await _studentService.GetAllStudentsAsync();
+    }
+
+    private async Task OpenAddStudentModal()
+    {
+        var result = await dialogService.OpenAsync<AddStudent>("", null);
+        if (result == true)
+        {
+            await studentsCardComponent.ReloadStudentsAsync();
+        }
+    }
+
+     private void SearchStudents()
+    {
+        
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredStudents = AllStudentsQueryResult
+                .Where(g => g.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+        else
+        {
+            filteredStudents = AllStudentsQueryResult;
+        }
+        totalRecords = filteredStudents.Count;
+    }
+}
