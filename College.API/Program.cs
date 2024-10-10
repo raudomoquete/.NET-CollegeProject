@@ -1,4 +1,5 @@
 using College.API;
+using College.API.Exception;
 using College.Application;
 using College.Infrastructure;
 
@@ -13,7 +14,12 @@ namespace College.API
             //Dependency Injection
             builder.Services.AddAPI(builder.Configuration)
                             .AddApplication()
-                            .AddInfrastructure(builder.Configuration);
+                            .AddInfrastructure(builder.Configuration)
+                            .AddExceptionHandler<GlobalExceptionHandler>()
+                            .AddExceptionHandler<BadRequestExceptionHandler>()
+                            .AddExceptionHandler<NotFoundExceptionHandler>()
+                            .AddProblemDetails();
+            
 
             var app = builder.Build();
 
