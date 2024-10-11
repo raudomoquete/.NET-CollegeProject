@@ -1,4 +1,5 @@
 ﻿using College.Domain.Models;
+using System.Linq.Expressions;
 
 namespace College.Application.Interfaces.Persistence
 {
@@ -21,5 +22,8 @@ namespace College.Application.Interfaces.Persistence
         Task UpdateAsync(T entity);
 
         Task DeleteAsync(int id);
+
+        // Nuevo método para buscar una entidad con un predicado
+        Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate);
     }
 }

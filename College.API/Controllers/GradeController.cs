@@ -56,7 +56,7 @@ namespace College.API.Controllers
 
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while retrieving grades.");
                 return StatusCode(500, new List<string> { "An error occurred while processing your request." });
@@ -78,7 +78,7 @@ namespace College.API.Controllers
 
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while deleting the grade with ID {GradeId}", id);
                 return StatusCode(500, new List<string> { "An error occurred while processing your request." });
@@ -100,7 +100,7 @@ namespace College.API.Controllers
 
                 return Ok(result);
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while retrieving the grade with ID {GradeId}", id);
                 return StatusCode(500, new List<string> { "An error occurred while processing your request." });

@@ -1,8 +1,9 @@
-﻿using MediatR;
+﻿using College.Application.Common;
+using MediatR;
 
 namespace College.Application.Features.Grade.Commands
 {
-    public class AddGradeCommand : IRequest<AddGradeResult>
+    public class AddGradeCommand : IRequest<Result>
     {
         public string Name { get; set; } = string.Empty;
 

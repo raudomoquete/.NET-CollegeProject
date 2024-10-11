@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using College.Application.Interfaces.Persistence;
 using College.Domain.Models;
+using System.Linq.Expressions;
 
 namespace College.Infrastructure.Repositories
 {
@@ -61,6 +62,11 @@ namespace College.Infrastructure.Repositories
         {
             _context.Set<T>().Update(entity);
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _context.Set<T>().FirstOrDefaultAsync(predicate);
         }
     }
 }
